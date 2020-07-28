@@ -1,7 +1,7 @@
 import datetime
 import ftplib
-import pyarrow.csv as pv
-import pyarrow.parquet as pq
+import pandas as pd
+import gc
 
 d1 = datetime.date(2019, 1, 1)
 d2 = datetime.date(2020, 6, 30)
@@ -23,11 +23,21 @@ ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
 ftp.encoding = "utf-8"
 ftp.cwd('ais_data')
 
-for filename in filenames[:2]:
-    filename = 'aisdk_20200101.csv'
+for filename in filenames[:5]:
+    print(filename)
     with open(filename, "wb") as file:
         # use FTP's RETR command to download the file
         ftp.retrbinary(f"RETR {filename}", file.write)
 
-    table = pv.read_csv(filename)
-    pq.write_table(table, filename.replace('csv', 'parquet'))
+    print('ftp done')
+    df = pd.read_csv(filename)
+    print('read df')
+    df.to_parquet(filename.replace('csv', 'parquet.gzip'), compression='gzip')
+    del df
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+    print('del df and file')
+    gc.collect()
+    df = pd.DataFrame()
