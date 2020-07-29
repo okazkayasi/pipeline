@@ -28,7 +28,10 @@ for filename in filenames[:30]:
 
     print('ftp done')
     df = pd.read_csv(filename)
-    print('read df')
+    print('read df', df.shape)
+    area_filter = ((df.Latitude > 47) & (df.Latitude < 60) & (df.Longitude > -19) & (df.Longitude < 7))
+    df = df[area_filter].reset_index()
+    print('df is filtered', df.shape)
     df.to_parquet(filename.replace('csv', 'parquet.gzip'), compression='gzip')
     del df
     try:
