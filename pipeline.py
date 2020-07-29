@@ -2,18 +2,15 @@ import datetime
 import ftplib
 import pandas as pd
 import gc
+import os
 
-d1 = datetime.date(2019, 1, 1)
+d1 = datetime.date(2020, 1, 1)
 d2 = datetime.date(2020, 6, 30)
 days = [d1 + datetime.timedelta(days=x) for x in range((d2-d1).days + 1)]
 filenames = []
 for day in days:
     filename = 'aisdk_' + day.strftime('%Y%m%d') + '.csv'
-    print(filename)
     filenames.append(filename)
-
-print(filenames)
-
 
 FTP_HOST = "ftp.ais.dk"
 FTP_USER = "anonymous"
@@ -23,7 +20,7 @@ ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
 ftp.encoding = "utf-8"
 ftp.cwd('ais_data')
 
-for filename in filenames[:5]:
+for filename in filenames[:30]:
     print(filename)
     with open(filename, "wb") as file:
         # use FTP's RETR command to download the file
@@ -37,6 +34,8 @@ for filename in filenames[:5]:
     try:
         os.remove(filename)
     except OSError:
+        print("couldn't delete {}".format(filename))
+        print(os.listdir)
         pass
     print('del df and file')
     gc.collect()
