@@ -39,33 +39,58 @@ def open_browser(visible=False):
 
 
 def get_active_names(br):
-    time.sleep(2)
+    time.sleep(5)
 
-    pip = br.find_element(By.CLASS_NAME, "search-results__list")\
+    reachable = br.find_element(By.CLASS_NAME, "search-results__list")\
         .find_elements_by_xpath("//span[text()='Status is reachable']")
-    people = br.find_element(By.CLASS_NAME, "search-results__list")\
+    online = br.find_element(By.CLASS_NAME, "search-results__list")\
         .find_elements_by_xpath("//span[text()='Status is online']")
-    del people[-1]
-    online = len(people)
-    reach = len(pip)
-    people.extend(pip)
-    names = []
-    for p in people:
-        try:
-            name = (p.find_element_by_xpath('../../../../../../../..')
+    offline = br.find_element(By.CLASS_NAME, "search-results__list")\
+        .find_elements_by_xpath("//span[text()='Status is offline']")
+
+    ghost = br.find_elements_by_class_name('ivm-view-attr__ghost-entity')
+
+    the_dict = {}
+
+    reachable_count = len(reachable)
+    online_count = len(online)
+    offline_count = len(offline)
+    total_count = reachable_count + online_count + offline_count
+
+    online_list, reachable_list, offline_list = [], [], []
+    for person in online:
+        name = (person.find_element_by_xpath('../../../../../../../..')
                 .find_element(By.CLASS_NAME, "search-result__info")
                 .find_element(By.CLASS_NAME, "actor-name").text)
-            names.append(name)
-        except Exception as e:
-            print(e)
-            time.sleep(5)
-            return get_active_names(br)
-    return names, online, reach
+        online_list.append(name)
+
+    if len(online_list) > 0:
+        del online_list[-1]
+
+    for person in reachable:
+        name = (person.find_element_by_xpath('../../../../../../../..')
+                .find_element(By.CLASS_NAME, "search-result__info")
+                .find_element(By.CLASS_NAME, "actor-name").text)
+        reachable_list.append(name)
+
+    for person in offline:
+        name = (person.find_element_by_xpath('../../../../../../../..')
+                .find_element(By.CLASS_NAME, "search-result__info")
+                .find_element(By.CLASS_NAME, "actor-name").text)
+        offline_list.append(name)
+
+    for person in ghost:
+        name = (person.find_element_by_xpath('../../../../../../..')
+                .find_element(By.CLASS_NAME, "search-result__info")
+                .find_element(By.CLASS_NAME, "actor-name").text)
+        offline_list.append(name)
+    return online_list, reachable_list, offline_list
 
 
 def go_next_page(br):
-
-
+    if not br.find_element_by_class_name('artdeco-pagination__button--next').is_enabled():
+        print('disabledd')
+        return False
     br.find_element_by_class_name('artdeco-pagination__button--next').click()
     time.sleep(4)
     return True
@@ -79,7 +104,6 @@ def go_down(br, n=1):
         html.send_keys(Keys.HOME)
 
 
-
 def fun(br):
 
     time.sleep(3)
@@ -91,38 +115,60 @@ def fun(br):
     except:
         print('no message box')
 
-    all_people = []
     online = 0
     reach = 0
+    everyone = 0
     check_people = ['asd']
     active = True
     page = 1
+
+    on_list = ['online:']
+    reach_list = ['reachable:']
+    off_list = ['offline:']
+
     while True:
         go_down(br)
-        page_people, page_online, page_reach = get_active_names(br)
-        print(page_people)
-        
-        online += page_online
-        reach += page_reach
+        online_list, reachable_list, offline_list = get_active_names(
+            br)
+        print(online_list)
+        print(reachable_list)
+        print(offline_list)
 
-        if page_people == check_people:
+        on_list.extend(online_list)
+        reach_list.extend(reachable_list)
+        off_list.extend(offline_list)
+
+        everyone += len(online_list) + len(reachable_list) + len(offline_list)
+        online += len(online_list)
+        reach += len(reachable_list)
+
+        # go to next page
+        print('all:{} online: {} and reachable {} at page {}'.format(
+            everyone, online, reach, page))
+        if not go_next_page(br):
             break
 
-        # go to next page           
-        all_people.extend(page_people)
-        print('online: {} and reachable {} at page {}'.format(online, reach, page))
         page += 1
-        check_people = page_people
-        go_next_page(br)
 
+    now = datetime.datetime.now()
+    days = ["Monday", "Tuesday", "Wednesday",
+            "Thursday", "Friday", "Saturday", "Sunday"]
+    intDay = datetime.datetime.today().weekday()
+    day = days[intDay]
+    todayDate = datetime.datetime.today().strftime('%Y-%m-%d')
+    dayTime = datetime.datetime.today().strftime('%H:%M')
 
-    fields = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-        online, reach]
-    fields.extend(all_people)
-    
+    f1 = ['Date', 'Day', 'Time', 'Total Count',
+          'Online Count', 'Reachable Count', 'Last Page']
+    fields = [todayDate, day, dayTime, everyone, online, reach, page]
+
     with open('names.csv', 'a', newline='\n', encoding='utf-8') as f:
         writer = csv.writer(f)
+        writer.writerow(f1)
         writer.writerow(fields)
+        writer.writerow(on_list)
+        writer.writerow(reach_list)
+        writer.writerow(off_list)
 
     config = configparser.ConfigParser()
     config.read('file.ini')
@@ -132,17 +178,11 @@ def fun(br):
 
 
 if __name__ == "__main__":
-    br = open_browser()
+    br = open_browser(True)
     run_time = 0
     while True:
         try:
             fun(br)
         except Exception as e:
-            if run_time == 0:  # means it didn't work even one time.
-                br = open_browser(visible=True)
-                try:
-                    fun(br)
-                except Exception as e:
-                    print('You have 3 minutes to solve the puzzle', e)
-                    time.sleep(180)
+            print(e)
         run_time += 1
