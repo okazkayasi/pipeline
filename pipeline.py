@@ -16,15 +16,16 @@ FTP_HOST = "ftp.ais.dk"
 FTP_USER = "anonymous"
 FTP_PASS = "okazkayasi@outlook.com"
 
-ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
+ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS, timeout=100)
+ftp.set_debuglevel(2)
 ftp.encoding = "utf-8"
 ftp.cwd('ais_data')
 
-for filename in filenames[:30]:
+for filename in filenames[4:30]:
     print(filename)
     with open(filename, "wb") as file:
         # use FTP's RETR command to download the file
-        ftp.retrbinary(f"RETR {filename}", file.write)
+        ftp.retrbinary(f"RETR {filename}", file.write, 262144)
 
     print('ftp done')
     df = pd.read_csv(filename)
